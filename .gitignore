@@ -1,0 +1,9 @@
+.vscode/launch.json
+app/scripts/.DS_Store
+modules/.DS_Store
+.vscode
+**DS_Store
+build
+.DS_Store 
+modules/speech-to-text/__pycache__/Myclass.cpython-311.pyc
+modules/speech2text/__*

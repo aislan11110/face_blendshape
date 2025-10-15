@@ -1,0 +1,48 @@
+<application>
+    <name>Face Blendshapes Detection</name>
+
+    <authors>
+        <author email="agos@ecomp.poli.br"> Seu Nome </author>
+    </authors>
+
+    <description>
+        Face landmark detection and blendshapes extraction using MediaPipe
+    </description>
+
+    <!-- ======== MODULES ======== -->
+    <module>
+        <name>faceBlendshapes</name>
+        <parameters>--from faceBlendshapes.ini</parameters>
+        <node>localhost</node>
+    </module>
+
+    <!-- Webcam module (optional - for testing) -->
+    <module>
+        <name>yarpdataplayer</name>
+        <parameters>--withExtraTimeCol 2</parameters>
+        <node>localhost</node>
+    </module>
+
+    <!-- YarpView for visualizing annotated images -->
+    <module>
+        <name>yarpview</name>
+        <parameters>--name /viewer/blendshapes --x 10 --y 10 --RefreshTime 33</parameters>
+        <node>localhost</node>
+    </module>
+
+    <!-- ======== CONNECTIONS ======== -->
+    <!-- Connect webcam/camera to face detection module -->
+    <connection>
+        <from>/grabber</from>
+        <to>/faceBlendshapes/image:i</to>
+        <protocol>mjpeg</protocol>
+    </connection>
+
+    <!-- Connect annotated output to viewer -->
+    <connection>
+        <from>/faceBlendshapes/annotated_image:o</from>
+        <to>/viewer/blendshapes</to>
+        <protocol>mjpeg</protocol>
+    </connection>
+
+</application>

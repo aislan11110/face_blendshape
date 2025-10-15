@@ -1,0 +1,17 @@
+channels:
+  - defaults
+  - conda-forge
+  - https://repo.prefix.dev/robotology
+dependencies:
+  - python=3.12
+  - pip
+  - yarp
+  - opencv
+  - numpy
+  # -icub-main # Uncomment if icub-main is needed
+
+  #insert here your usual dependencies
+  - pip:
+      - mediapipe
+      - supervision
+      - ultralytics

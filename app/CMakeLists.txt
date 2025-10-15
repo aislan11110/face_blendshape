@@ -1,0 +1,1 @@
+add_subdirectory(face_blendshapes_app)
