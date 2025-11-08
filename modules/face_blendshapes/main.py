@@ -15,16 +15,6 @@ import warnings
 warnings.filterwarnings('ignore')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-try:
-    from deepface import DeepFace
-    import tensorflow as tf
-
-    tf.get_logger().setLevel('ERROR')
-    HAS_DEEPFACE = True
-except ImportError:
-    HAS_DEEPFACE = False
-    print("[WARNING] DeepFace not installed. Install with: pip install deepface tf-keras")
-
 
 # ================= LOGGING FUNCTIONS =================
 def yarpInfo(msg):
@@ -80,9 +70,9 @@ FACE_CONNECTIONS = [
 
 # ================= DATA CLASSES =================
 @dataclass
-class AnomalyDetection:
-    """Resultado da detecção de anomalia"""
-    anomaly_type: str
+class ComplexAffectiveStateDetection:
+    """Resultado da detecção de Complex Affective State"""
+    state_type: str
     confidence: float
     contributing_factors: Dict[str, float]
     timestamp: float
@@ -178,9 +168,9 @@ class ValenceArousalConverter:
         return valence, arousal
 
 
-# ================= MATHEMATICAL ANOMALY DETECTOR =================
-class MathematicalAnomalyDetector:
-    """Implementa detecção de anomalias baseada em modelo matemático"""
+# ================= MATHEMATICAL COMPLEX AFFECTIVE STATE DETECTOR =================
+class ComplexAffectiveStateDetector:
+    """Implementa detecção de Complex Affective States baseada em modelo matemático"""
 
     def __init__(self, fps=30):
         self.fps = fps
@@ -188,7 +178,7 @@ class MathematicalAnomalyDetector:
         self.valence_buffer = deque(maxlen=int(fps * 0.5))
         self.timestamp_buffer = deque(maxlen=int(fps * 0.5))
 
-        self.anomaly_params = {
+        self.state_params = {
             'stress': {
                 'alpha': -0.7,
                 'beta': 0.8,
@@ -257,14 +247,14 @@ class MathematicalAnomalyDetector:
 
         return np.clip(incongruence, 0.0, 1.0)
 
-    def F_Anom(self, valence: float, arousal: float,
-               arousal_derivative: float, incongruence: float,
-               anomaly_type: str) -> float:
-        """Função generalizada de ativação de anomalia"""
-        if anomaly_type not in self.anomaly_params:
+    def F_ComplexAffectiveState(self, valence: float, arousal: float,
+                                arousal_derivative: float, incongruence: float,
+                                state_type: str) -> float:
+        """Função generalizada de ativação de Complex Affective State"""
+        if state_type not in self.state_params:
             return 0.0
 
-        params = self.anomaly_params[anomaly_type]
+        params = self.state_params[state_type]
 
         dimensional_term = params['alpha'] * valence + params['beta'] * arousal
         bias_term = params['gamma']
@@ -276,9 +266,9 @@ class MathematicalAnomalyDetector:
 
         return activation
 
-    def detect_anomalies(self, valence: float, arousal: float,
-                         physio_arousal: float = None) -> Dict[str, float]:
-        """Detecta todas as anomalias"""
+    def detect_complex_states(self, valence: float, arousal: float,
+                              physio_arousal: float = None) -> Dict[str, float]:
+        """Detecta todos os Complex Affective States"""
         current_time = time.time()
         self.arousal_buffer.append(arousal)
         self.valence_buffer.append(valence)
@@ -289,41 +279,41 @@ class MathematicalAnomalyDetector:
             valence, arousal, physio_arousal
         )
 
-        anomaly_scores = {}
-        for anomaly_type in self.anomaly_params.keys():
-            score = self.F_Anom(
+        state_scores = {}
+        for state_type in self.state_params.keys():
+            score = self.F_ComplexAffectiveState(
                 valence, arousal, arousal_derivative,
-                incongruence, anomaly_type
+                incongruence, state_type
             )
-            anomaly_scores[anomaly_type] = score
+            state_scores[state_type] = score
 
-        anomaly_scores['_debug'] = {
+        state_scores['_debug'] = {
             'arousal_derivative': arousal_derivative,
             'incongruence': incongruence,
             'valence': valence,
             'arousal': arousal
         }
 
-        return anomaly_scores
+        return state_scores
 
-    def get_dominant_anomaly(self, anomaly_scores: Dict[str, float],
-                             threshold: float = 0.55) -> Optional[AnomalyDetection]:
-        """Retorna anomalia dominante se ultrapassar threshold"""
-        scores = {k: v for k, v in anomaly_scores.items() if k != '_debug'}
+    def get_dominant_state(self, state_scores: Dict[str, float],
+                           threshold: float = 0.55) -> Optional[ComplexAffectiveStateDetection]:
+        """Retorna Complex Affective State dominante se ultrapassar threshold"""
+        scores = {k: v for k, v in state_scores.items() if k != '_debug'}
 
         if not scores:
             return None
 
-        max_anomaly = max(scores, key=scores.get)
-        max_score = scores[max_anomaly]
+        max_state = max(scores, key=scores.get)
+        max_score = scores[max_state]
 
         if max_score < threshold:
             return None
 
-        debug = anomaly_scores.get('_debug', {})
+        debug = state_scores.get('_debug', {})
 
-        return AnomalyDetection(
-            anomaly_type=max_anomaly,
+        return ComplexAffectiveStateDetection(
+            state_type=max_state,
             confidence=max_score,
             contributing_factors=scores,
             timestamp=time.time(),
@@ -364,7 +354,7 @@ class FaceBlendshapesModule(yarp.RFModule):
         # Data output ports
         self.output_blendshapes_port = yarp.Port()
         self.output_emotion_port = yarp.Port()
-        self.output_anomaly_port = yarp.Port()
+        self.output_complex_state_port = yarp.Port()
 
         # Image buffers
         self.input_img_array = None
@@ -381,7 +371,7 @@ class FaceBlendshapesModule(yarp.RFModule):
 
         # Converters and detectors
         self.va_converter = ValenceArousalConverter()
-        self.anomaly_detector = MathematicalAnomalyDetector(fps=30)
+        self.complex_state_detector = ComplexAffectiveStateDetector(fps=30)
 
         # Baseline e estado
         self.baseline = None
@@ -431,9 +421,9 @@ class FaceBlendshapesModule(yarp.RFModule):
                                      yarp.Value(True),
                                      "send emotion data").asBool()
 
-        self.send_anomalies = rf.check("send_anomalies",
-                                       yarp.Value(True),
-                                       "send anomaly detection").asBool()
+        self.send_complex_states = rf.check("send_complex_states",
+                                            yarp.Value(True),
+                                            "send complex affective state detection").asBool()
 
         # Initialize MediaPipe
         try:
@@ -459,8 +449,8 @@ class FaceBlendshapesModule(yarp.RFModule):
         if self.send_emotion:
             self.output_emotion_port.open('/' + self.module_name + '/emotion:o')
 
-        if self.send_anomalies:
-            self.output_anomaly_port.open('/' + self.module_name + '/anomaly:o')
+        if self.send_complex_states:
+            self.output_complex_state_port.open('/' + self.module_name + '/complex_state:o')
 
         # Initialize image arrays
         self.input_img_array = np.zeros((self.height_img, self.width_img, 3), dtype=np.uint8)
@@ -468,7 +458,7 @@ class FaceBlendshapesModule(yarp.RFModule):
 
         yarpInfo('Module initialized successfully')
         yarpInfo(f'Emotion output: {self.send_emotion}')
-        yarpInfo(f'Anomaly detection: {self.send_anomalies}')
+        yarpInfo(f'Complex Affective State detection: {self.send_complex_states}')
 
         return True
 
@@ -567,18 +557,18 @@ class FaceBlendshapesModule(yarp.RFModule):
         bottle.addFloat64(arousal)
         return bottle
 
-    def anomaly_to_bottle(self, anomaly: AnomalyDetection) -> yarp.Bottle:
-        """Cria YARP bottle com dados de anomalia"""
+    def complex_state_to_bottle(self, state: ComplexAffectiveStateDetection) -> yarp.Bottle:
+        """Cria YARP bottle com dados de Complex Affective State"""
         bottle = yarp.Bottle()
-        bottle.addString(anomaly.anomaly_type)
-        bottle.addFloat64(anomaly.confidence)
-        bottle.addFloat64(anomaly.valence)
-        bottle.addFloat64(anomaly.arousal)
-        bottle.addFloat64(anomaly.arousal_derivative)
+        bottle.addString(state.state_type)
+        bottle.addFloat64(state.confidence)
+        bottle.addFloat64(state.valence)
+        bottle.addFloat64(state.arousal)
+        bottle.addFloat64(state.arousal_derivative)
 
         # Adicionar fatores contribuintes
         factors = yarp.Bottle()
-        for factor_name, factor_value in anomaly.contributing_factors.items():
+        for factor_name, factor_value in state.contributing_factors.items():
             if factor_name != '_debug':
                 f_bottle = yarp.Bottle()
                 f_bottle.addString(factor_name)
@@ -629,8 +619,8 @@ class FaceBlendshapesModule(yarp.RFModule):
                         bottle = self.blendshapes_to_bottle(blendshapes_dict)
                         self.output_blendshapes_port.write(bottle)
 
-                    # ============= PROCESSAMENTO DE EMOÇÃO E ANOMALIAS =============
-                    if self.send_emotion or self.send_anomalies:
+                    # ============= PROCESSAMENTO DE EMOÇÃO E COMPLEX STATES =============
+                    if self.send_emotion or self.send_complex_states:
                         # Calcular V-A
                         valence_cat, arousal_cat = self.va_converter.convert_categorical_to_va(
                             {'neutral': 1.0}  # Placeholder para regras simples
@@ -640,17 +630,17 @@ class FaceBlendshapesModule(yarp.RFModule):
                         valence = 0.5 * valence_cat + 0.5 * valence_bs
                         arousal = 0.5 * arousal_cat + 0.5 * arousal_bs
 
-                        # Detectar anomalias
-                        if self.send_anomalies:
-                            anomaly_scores = self.anomaly_detector.detect_anomalies(valence, arousal)
-                            detected_anomaly = self.anomaly_detector.get_dominant_anomaly(
-                                anomaly_scores,
+                        # Detectar Complex Affective States
+                        if self.send_complex_states:
+                            state_scores = self.complex_state_detector.detect_complex_states(valence, arousal)
+                            detected_state = self.complex_state_detector.get_dominant_state(
+                                state_scores,
                                 threshold=0.55
                             )
 
-                            if detected_anomaly and self.output_anomaly_port.getOutputCount():
-                                bottle = self.anomaly_to_bottle(detected_anomaly)
-                                self.output_anomaly_port.write(bottle)
+                            if detected_state and self.output_complex_state_port.getOutputCount():
+                                bottle = self.complex_state_to_bottle(detected_state)
+                                self.output_complex_state_port.write(bottle)
 
                         # Enviar emoção
                         if self.send_emotion and self.output_emotion_port.getOutputCount():
@@ -694,7 +684,7 @@ class FaceBlendshapesModule(yarp.RFModule):
                     "  process [on/off] - Enable/disable processing\n"
                     "  landmarks [on/off] - Toggle landmark drawing\n"
                     "  emotion [on/off] - Toggle emotion output\n"
-                    "  anomalies [on/off] - Toggle anomaly detection\n"
+                    "  complex_states [on/off] - Toggle complex affective state detection\n"
                     "  status - Get module status\n"
                     "  quit - Quit module\n"
                 )
@@ -721,19 +711,19 @@ class FaceBlendshapesModule(yarp.RFModule):
                 else:
                     reply.addString("usage: emotion [on/off]")
 
-            elif cmd == "anomalies":
+            elif cmd == "complex_states":
                 if command.size() > 1:
-                    self.send_anomalies = command.get(1).asString() == 'on'
+                    self.send_complex_states = command.get(1).asString() == 'on'
                     reply.addString("ok")
                 else:
-                    reply.addString("usage: anomalies [on/off]")
+                    reply.addString("usage: complex_states [on/off]")
 
             elif cmd == "status":
                 status = (
                     f"Processing: {self.process}\n"
                     f"Landmarks: {self.draw_landmarks_flag}\n"
                     f"Emotion: {self.send_emotion}\n"
-                    f"Anomalies: {self.send_anomalies}\n"
+                    f"Complex States: {self.send_complex_states}\n"
                     f"Frame size: {self.width_img}x{self.height_img}\n"
                     f"Baseline: {'Yes' if self.baseline else 'No'}\n"
                 )
@@ -761,8 +751,8 @@ class FaceBlendshapesModule(yarp.RFModule):
         self.output_blendshapes_port.interrupt()
         if self.send_emotion:
             self.output_emotion_port.interrupt()
-        if self.send_anomalies:
-            self.output_anomaly_port.interrupt()
+        if self.send_complex_states:
+            self.output_complex_state_port.interrupt()
         return True
 
     def close(self):
@@ -774,8 +764,8 @@ class FaceBlendshapesModule(yarp.RFModule):
         self.output_blendshapes_port.close()
         if self.send_emotion:
             self.output_emotion_port.close()
-        if self.send_anomalies:
-            self.output_anomaly_port.close()
+        if self.send_complex_states:
+            self.output_complex_state_port.close()
         return True
 
 
