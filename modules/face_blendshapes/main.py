@@ -200,7 +200,7 @@ class ComplexAffectiveStateDetector:
                 'lambda_I': 0.3,
                 'lambda_D': 0.1
             },
-            'suppression': {
+            'apathy': {
                 'alpha': 0.5,
                 'beta': 0.6,
                 'gamma': 0.0,

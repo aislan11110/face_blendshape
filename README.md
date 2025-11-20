@@ -31,7 +31,7 @@ Advanced face landmark detection and facial expression analysis module using Med
   - Stress
   - Anxiety
   - Deep Sadness
-  - Suppression
+  - Apathy
 - **Multi-Modal Emotion Analysis** - Combines facial blendshapes with physiological indicators
 - **Intermodal Incongruence Detection** - Identifies mismatches between facial and physiological signals
 - **YARP Integration** - Seamless communication with robotics systems
@@ -184,7 +184,7 @@ YARP bottle containing sophisticated affective state information:
 ```
 
 Where:
-- **state_type** (string): Detected complex state (stress, anxiety, deep_sadness, suppression)
+- **state_type** (string): Detected complex state (stress, anxiety, deep_sadness, apathy)
 - **confidence** (float): State activation level (0.0 - 1.0)
 - **valence** (float): Dimensional valence (-1.0 to 1.0)
 - **arousal** (float): Dimensional arousal (-1.0 to 1.0)
@@ -208,7 +208,7 @@ Where:
 - Indicates prolonged negative emotional state
 - Parameters: very negative alpha and beta, low incongruence weight
 
-**Suppression**
+**Apathy**
 - Neutral or positive valence with moderate arousal
 - Indicates emotional regulation or inhibition
 - Parameters: high gamma bias (baseline shift)
@@ -274,7 +274,7 @@ yarp read ... /faceBlendshapes/blendshapes:o
 # Terminal: Read complex affective states
 yarp read ... /faceBlendshapes/complex_state:o
 
-# Monitor for stress, anxiety, deep sadness, or suppression detection
+# Monitor for stress, anxiety, deep sadness, or apathy detection
 ```
 
 ## 4. Robot Control via Facial Expressions and Emotions
@@ -353,7 +353,7 @@ Where:
 
 Detects mismatches between facial expressions and physiological indicators:
 - Negative valence with increasing arousal (inconsistency)
-- Positive valence with high arousal (potential suppression or excitement)
+- Positive valence with high arousal (potential apathy or excitement)
 - Can incorporate actual physiological data if available
 
 # 🔧 Troubleshooting
